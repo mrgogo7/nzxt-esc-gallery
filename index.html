@@ -33,12 +33,11 @@
 
         /* ========================================================
            KRAKEN BROWSER MODE (ON THE PUMP ITSELF)
-           Displays as a circle. Everything inside must be centered.
+           Displays according to the API's shape/width/height.
            ======================================================== */
         body.kraken-mode {
             justify-content: center;
             align-items: center;
-            /* CAM API injects width/height, but we'll default to 640x640 for preview */
             width: 100vw;
             height: 100vh;
         }
@@ -46,14 +45,14 @@
         .kraken-screen {
             display: none; /* Only visible in kraken mode */
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             background: radial-gradient(circle, #2a2a35 0%, #0f0f13 100%);
-            border-radius: 50%;
             overflow: hidden;
+            /* Dimensions set dynamically via JS from NZXT API */
             width: 100%;
             height: 100%;
-            padding: 10%; /* Keep content away from the physical circular bezel */
+            padding: 12%;
             text-align: center;
         }
 
@@ -62,44 +61,85 @@
         }
 
         .kraken-title {
-            font-size: 2vw;
+            font-size: clamp(14px, 2.5vw, 24px);
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-bottom: 2vh;
+            flex-shrink: 0;
         }
 
         .kraken-stats {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
+            flex-direction: column;
+            gap: 10px;
             width: 100%;
+            flex: 1;
+            overflow: hidden;
+            justify-content: center;
         }
 
-        .k-stat {
+        .k-hardware-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
             background: rgba(0, 0, 0, 0.4);
             border-radius: 12px;
-            padding: 10px 15px;
-            min-width: 120px;
+            padding: 8px;
             border: 1px solid rgba(255,255,255,0.05);
         }
 
-        .k-stat-label { font-size: 1.5vw; color: var(--text-muted); display: block; margin-bottom: 5px; }
-        .k-stat-val { font-size: 3vw; font-weight: bold; }
+        .k-section-title {
+            width: 100%;
+            font-size: clamp(12px, 2vw, 18px);
+            font-weight: bold;
+            margin-bottom: 4px;
+            text-align: left;
+            padding-left: 5px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .k-stat {
+            flex: 1 1 30%;
+            min-width: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 5px;
+        }
+
+        .k-stat-label { font-size: clamp(9px, 1.5vw, 12px); color: var(--text-muted); display: block; margin-bottom: 2px; }
+        .k-stat-val { font-size: clamp(12px, 2.2vw, 18px); font-weight: bold; }
+
         .c-cpu { color: var(--cpu-color); }
+        .c-cpu-title { color: var(--cpu-color); }
         .c-gpu { color: var(--gpu-color); }
+        .c-gpu-title { color: var(--gpu-color); }
         .c-ram { color: var(--ram-color); }
+        .c-ram-title { color: var(--ram-color); }
         .c-liq { color: var(--kraken-color); }
+        .c-liq-title { color: var(--kraken-color); }
 
         /* ========================================================
            CONFIGURATION BROWSER MODE (ON PC MONITOR)
-           Displays developer tools, JSON preview, and simulated pump
            ======================================================== */
         .desktop-layout {
             display: flex;
             width: 100%;
             height: 100%;
+            flex-direction: row;
+        }
+
+        /* Responsive stack for smaller windows */
+        @media (max-width: 1100px) {
+            .desktop-layout {
+                flex-direction: column;
+                overflow-y: auto;
+            }
         }
 
         body.kraken-mode .desktop-layout {
@@ -108,13 +148,13 @@
 
         .left-panel {
             flex: 1;
-            padding: 40px;
+            padding: 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
             border-right: 1px solid #333;
             background: #15151a;
-            overflow-y: auto;
+            min-height: 400px; /* Prevent crushing on mobile */
         }
 
         .right-panel {
@@ -123,23 +163,42 @@
             display: flex;
             flex-direction: column;
             background: #0a0a0c;
+            min-height: 400px; /* Prevent crushing on mobile */
+        }
+
+        /* Responsive preview container that scales down via Transform if needed */
+        .preview-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .preview-container {
+            /* Width/Height/Border-radius injected dynamically to match API */
             width: 640px;
             height: 640px;
-            border-radius: 50%; /* Simulate physical screen */
+            border-radius: 50%;
             border: 10px solid #222;
             box-shadow: 0 0 50px rgba(0,0,0,0.8);
             position: relative;
             background: #000;
             flex-shrink: 0;
             overflow: hidden;
-            /* We inject the kraken-screen content here via JS cloning for the preview */
+            /* Scale down if parent is smaller */
+            transform-origin: top center;
         }
 
         .dev-header {
             margin-bottom: 20px;
+        }
+
+        .dev-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .dev-header h1 {
@@ -154,6 +213,25 @@
             font-size: 14px;
         }
 
+        .btn-copy {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-copy:hover {
+            background-color: #8e44ad;
+        }
+
+        .btn-copy:active {
+            transform: scale(0.98);
+        }
+
         .json-viewer {
             flex: 1;
             background: #000;
@@ -164,6 +242,7 @@
             font-size: 13px;
             line-height: 1.5;
             border: 1px solid #333;
+            position: relative;
         }
 
         /* Syntax Highlighting */
@@ -189,44 +268,98 @@
     <!-- DESKTOP DEV DASHBOARD (Visible normally on monitor) -->
     <div class="desktop-layout" id="desktop-ui">
         <div class="left-panel">
-            <div class="dev-header" style="text-align: center; margin-bottom: 40px;">
-                <h1>Pump LCD Preview</h1>
-                <p>Simulating 640x640 display</p>
-                <p style="color: #e74c3c; font-size: 12px; margin-top: 10px;">(This is how it will look on the physical AIO)</p>
+            <div class="dev-header" style="text-align: center; margin-bottom: 30px;">
+                <h1>LCD Preview</h1>
+                <p id="preview-resolution-text">Simulating hardware display</p>
+                <p style="color: #e74c3c; font-size: 12px; margin-top: 10px;">(This mirrors the physical AIO view)</p>
             </div>
 
-            <div class="preview-container" id="pump-preview">
-                <!-- We will copy the kraken-ui HTML into here so the developer sees exactly what the pump sees -->
+            <div class="preview-wrapper" id="preview-wrapper">
+                <div class="preview-container" id="pump-preview">
+                    <!-- Cloned kraken-ui goes here -->
+                </div>
             </div>
         </div>
         <div class="right-panel">
-            <div class="dev-header">
-                <h1>Live API Data (Developer View)</h1>
-                <p>Analyze `window.nzxt.v1.onMonitoringDataUpdate(data)` payload in real-time. Use this to find all fields like gpu0, gpu1, arrays, etc.</p>
+            <div class="dev-header dev-header-flex">
+                <div>
+                    <h1>Live API Data</h1>
+                    <p>Analyze `window.nzxt.v1.onMonitoringDataUpdate(data)` payload.</p>
+                </div>
+                <button class="btn-copy" id="btn-copy" onclick="copyJsonData()">Copy JSON</button>
             </div>
             <pre class="json-viewer" id="json-viewer">Waiting for API data...</pre>
         </div>
     </div>
 
     <script>
+        // Store latest raw data for copying
+        let latestRawData = {};
+
         // ---------------------------------------------------------
-        // 1. ENVIRONMENT DETECTION
-        // CAM adds "?kraken=1" when loading this URL inside the actual pump LCD browser.
-        // If it's not there, we assume the user opened the URL on their PC monitor (Config Browser).
+        // 1. ENVIRONMENT DETECTION & SCREEN SETUP
         // ---------------------------------------------------------
         const searchParams = new URLSearchParams(window.location.search);
         const isKrakenBrowser = searchParams.get("kraken") === "1" || searchParams.get("test") === "kraken";
 
-        if (isKrakenBrowser) {
-            document.body.classList.add("kraken-mode");
-            console.log("Running in Kraken LCD Mode");
-        } else {
-            console.log("Running in Desktop Config / Developer Mode");
-            // Set up the pump preview container to mirror the kraken UI
-            document.getElementById('pump-preview').innerHTML = document.getElementById('kraken-ui').outerHTML;
-            // Un-hide the mirrored preview
-            document.getElementById('pump-preview').querySelector('.kraken-screen').style.display = 'flex';
+        // Setup initial dimensions based on API if available, else fallback to 640x640 circle
+        function getScreenDimensions() {
+            const api = window.nzxt?.v1;
+            const w = api?.width || 640;
+            const h = api?.height || 640;
+            const shape = api?.shape || "circle"; // "circle" or "square"
+            return { w, h, shape };
         }
+
+        function applyScreenDimensions() {
+            const { w, h, shape } = getScreenDimensions();
+            const krakenUi = document.getElementById('kraken-ui');
+            const borderRadius = shape === "circle" ? "50%" : "0%";
+
+            if (isKrakenBrowser) {
+                document.body.classList.add("kraken-mode");
+                krakenUi.style.width = w + "px";
+                krakenUi.style.height = h + "px";
+                krakenUi.style.borderRadius = borderRadius;
+            } else {
+                // Desktop Mode: Setup mirrored preview
+                const previewContainer = document.getElementById('pump-preview');
+                const resolutionText = document.getElementById('preview-resolution-text');
+
+                previewContainer.style.width = w + "px";
+                previewContainer.style.height = h + "px";
+                previewContainer.style.borderRadius = borderRadius;
+                resolutionText.innerText = `Simulating ${w}x${h} ${shape} display`;
+
+                // Handle responsive scaling for small monitors
+                const wrapper = document.getElementById('preview-wrapper');
+                const scalePreview = () => {
+                    const availableWidth = wrapper.clientWidth;
+                    if (availableWidth < w + 20) {
+                        const scale = availableWidth / (w + 20);
+                        previewContainer.style.transform = `scale(${scale})`;
+                        previewContainer.style.marginBottom = `-${h * (1 - scale)}px`;
+                    } else {
+                        previewContainer.style.transform = 'scale(1)';
+                        previewContainer.style.marginBottom = '0px';
+                    }
+                };
+                window.addEventListener('resize', scalePreview);
+                setTimeout(scalePreview, 100);
+
+                // Clone HTML for preview
+                previewContainer.innerHTML = krakenUi.outerHTML;
+                previewContainer.querySelector('.kraken-screen').style.display = 'flex';
+                // Inherit the dynamic styles into the cloned element
+                const clonedScreen = previewContainer.querySelector('.kraken-screen');
+                clonedScreen.style.width = "100%";
+                clonedScreen.style.height = "100%";
+                clonedScreen.style.borderRadius = borderRadius;
+            }
+        }
+
+        // Apply on load, but we might need to re-apply if the API initializes slightly after DOM loaded
+        setTimeout(applyScreenDimensions, 50);
 
         // ---------------------------------------------------------
         // 2. DATA FORMATTING UTILITIES
@@ -247,62 +380,97 @@
             });
         }
 
-        function formatVal(val) {
+        function formatVal(val, decimals = 0) {
             if (val === undefined || val === null) return '--';
-            return Math.round(val);
+            const multiplier = Math.pow(10, decimals);
+            return Math.round(val * multiplier) / multiplier;
+        }
+
+        async function copyJsonData() {
+            const btn = document.getElementById('btn-copy');
+            try {
+                const textToCopy = JSON.stringify(latestRawData, null, 2);
+                await navigator.clipboard.writeText(textToCopy);
+                btn.innerText = "Copied!";
+                btn.style.backgroundColor = "#2ecc71";
+            } catch (err) {
+                btn.innerText = "Failed to copy";
+                btn.style.backgroundColor = "#e74c3c";
+            }
+            setTimeout(() => {
+                btn.innerText = "Copy JSON";
+                btn.style.backgroundColor = "var(--accent)";
+            }, 2000);
         }
 
         // ---------------------------------------------------------
         // 3. UI UPDATER (Runs every 1 second when CAM pushes data)
         // ---------------------------------------------------------
         function updateUI(data) {
+            latestRawData = data;
+
+            // Re-apply dimensions in case the API loaded late
+            applyScreenDimensions();
+
             // Update the raw JSON on the desktop monitor view
             if (!isKrakenBrowser) {
                 document.getElementById('json-viewer').innerHTML = syntaxHighlight(data);
             }
 
-            // Build the HTML for the circular LCD screen
+            // Build the HTML for the Kraken screen
             let statsHtml = '';
 
-            // CPU Temp & Load
+            // --- CPU SECTION ---
             if (data.cpus && data.cpus.length > 0) {
-                const cpu = data.cpus[0]; // Usually just 1 CPU
+                const cpu = data.cpus[0];
                 const loadStr = cpu.load !== undefined ? formatVal(cpu.load * 100) + '%' : '--%';
                 statsHtml += `
-                    <div class="k-stat">
-                        <span class="k-stat-label">CPU Temp</span>
-                        <span class="k-stat-val c-cpu">${formatVal(cpu.temperature)}°C</span>
-                    </div>
-                    <div class="k-stat">
-                        <span class="k-stat-label">CPU Load</span>
-                        <span class="k-stat-val c-cpu">${loadStr}</span>
+                    <div class="k-hardware-section">
+                        <div class="k-section-title c-cpu-title">CPU: ${cpu.name || 'Unknown'}</div>
+                        <div class="k-stat"><span class="k-stat-label">Temp</span><span class="k-stat-val c-cpu">${formatVal(cpu.temperature)}°C</span></div>
+                        <div class="k-stat"><span class="k-stat-label">Load</span><span class="k-stat-val c-cpu">${loadStr}</span></div>
+                        <div class="k-stat"><span class="k-stat-label">Power</span><span class="k-stat-val c-cpu">${formatVal(cpu.power)}W</span></div>
+                        <div class="k-stat"><span class="k-stat-label">Freq</span><span class="k-stat-val c-cpu">${formatVal(cpu.frequency)}MHz</span></div>
+                        <div class="k-stat"><span class="k-stat-label">Fan</span><span class="k-stat-val c-cpu">${formatVal(cpu.fanSpeed)}RPM</span></div>
                     </div>
                 `;
             }
 
-            // GPU Temps & Loads (Handles GPU0, GPU1, etc dynamically)
+            // --- GPU SECTION (Handles GPU0, GPU1) ---
             if (data.gpus && data.gpus.length > 0) {
                 data.gpus.forEach((gpu, index) => {
                     const loadStr = gpu.load !== undefined ? formatVal(gpu.load * 100) + '%' : '--%';
                     statsHtml += `
-                        <div class="k-stat">
-                            <span class="k-stat-label">GPU${index} Temp</span>
-                            <span class="k-stat-val c-gpu">${formatVal(gpu.temperature)}°C</span>
-                        </div>
-                        <div class="k-stat">
-                            <span class="k-stat-label">GPU${index} Load</span>
-                            <span class="k-stat-val c-gpu">${loadStr}</span>
+                        <div class="k-hardware-section">
+                            <div class="k-section-title c-gpu-title">GPU${index}: ${gpu.name || 'Unknown'}</div>
+                            <div class="k-stat"><span class="k-stat-label">Temp</span><span class="k-stat-val c-gpu">${formatVal(gpu.temperature)}°C</span></div>
+                            <div class="k-stat"><span class="k-stat-label">Load</span><span class="k-stat-val c-gpu">${loadStr}</span></div>
+                            <div class="k-stat"><span class="k-stat-label">Power</span><span class="k-stat-val c-gpu">${formatVal(gpu.power)}W</span></div>
+                            <div class="k-stat"><span class="k-stat-label">Freq</span><span class="k-stat-val c-gpu">${formatVal(gpu.frequency)}MHz</span></div>
+                            <div class="k-stat"><span class="k-stat-label">Fan</span><span class="k-stat-val c-gpu">${formatVal(gpu.fanSpeed)}RPM</span></div>
                         </div>
                     `;
                 });
             }
 
-            // Liquid Temp
+            // --- RAM SECTION ---
+            if (data.ram) {
+                const inUseGb = formatVal(data.ram.inUse / 1024, 1);
+                const totalGb = formatVal(data.ram.totalSize / 1024, 1);
+                statsHtml += `
+                    <div class="k-hardware-section">
+                        <div class="k-section-title c-ram-title">Memory</div>
+                        <div class="k-stat"><span class="k-stat-label">Usage</span><span class="k-stat-val c-ram">${inUseGb} / ${totalGb} GB</span></div>
+                    </div>
+                `;
+            }
+
+            // --- KRAKEN LIQUID SECTION ---
             if (data.kraken) {
                 statsHtml += `
-                    <div class="k-stat" style="width: 100%;">
-                        <span class="k-stat-label">Liquid Temp</span>
-                        <span class="k-stat-val c-liq">${formatVal(data.kraken.liquidTemperature)}°C</span>
+                    <div class="k-hardware-section">
+                        <div class="k-section-title c-liq-title">Cooler</div>
+                        <div class="k-stat"><span class="k-stat-label">Liquid Temp</span><span class="k-stat-val c-liq">${formatVal(data.kraken.liquidTemperature)}°C</span></div>
                     </div>
                 `;
             }
@@ -336,7 +504,7 @@
         if (forceMockData) {
             console.log("Running in Mock Test Mode.");
 
-            // If the API hasn't populated window.nzxt.v1.shape natively, let's mock it
+            // Mock API configuration
             if (!window.nzxt.v1.shape) {
                 window.nzxt.v1.shape = "circle";
                 window.nzxt.v1.width = 640;
@@ -345,16 +513,73 @@
 
             setInterval(() => {
                 const mockData = {
-                    cpus: [
-                        { name: "Intel Core i9-13900K", load: Math.random() * 0.4 + 0.1, temperature: Math.random() * 15 + 45 }
+                    "cpus": [
+                        {
+                            "name": "Ryzen 7 9800X3D",
+                            "manufacturer": "AMD",
+                            "codeName": "Granite Ridge",
+                            "socket": "Socket AM5 (LGA1718)",
+                            "load": 0.07089555263519287,
+                            "numCores": 8,
+                            "numThreads": 16,
+                            "temperature": 43.875,
+                            "frequency": 5025,
+                            "minFrequency": 2323,
+                            "maxFrequency": 5225,
+                            "stockFrequency": 4700,
+                            "fanSpeed": 2102,
+                            "minFanSpeed": 1401,
+                            "maxFanSpeed": 2903,
+                            "tdp": 120,
+                            "power": 26.68903160095215
+                        }
                     ],
-                    gpus: [
-                        { name: "NVIDIA GeForce RTX 4090", load: Math.random() * 0.9, temperature: Math.random() * 20 + 50 },
-                        { name: "NVIDIA GeForce RTX 4090 (Secondary)", load: 0.05, temperature: 41 } // Multiple GPUs simulation (GPU0, GPU1)
+                    "gpus": [
+                        {
+                            "name": "NVIDIA GeForce RTX 4060 Ti",
+                            "load": 0.09000000357627869,
+                            "temperature": 45,
+                            "minTemperature": 40,
+                            "maxTemperature": 66,
+                            "frequency": 2565,
+                            "minFrequency": 2565,
+                            "maxFrequency": 2910,
+                            "fanSpeed": 0,
+                            "minFanSpeed": 0,
+                            "maxFanSpeed": 1726,
+                            "power": 24.586000442504883
+                        }
                     ],
-                    ram: { totalSize: 32768, inUse: Math.random() * 4000 + 12000 },
-                    kraken: { liquidTemperature: Math.random() * 2 + 32 }
+                    "ram": {
+                        "totalSize": 32410,
+                        "inUse": 9244,
+                        "modules": [
+                            {
+                                "kind": "DDR5",
+                                "size": 16384,
+                                "model": "G.Skill F5-6000J2836G16G",
+                                "frequency": 3000,
+                                "stockFrequency": 2400
+                            },
+                            {
+                                "kind": "DDR5",
+                                "size": 16384,
+                                "model": "G.Skill F5-6000J2836G16G",
+                                "frequency": 3000,
+                                "stockFrequency": 2400
+                            }
+                        ]
+                    },
+                    "kraken": {
+                        "liquidTemperature": 27
+                    }
                 };
+
+                // Add some jitter so numbers look live
+                mockData.cpus[0].temperature += (Math.random() * 2 - 1);
+                mockData.cpus[0].load += (Math.random() * 0.02 - 0.01);
+                mockData.gpus[0].temperature += (Math.random() * 2 - 1);
+                mockData.ram.inUse += (Math.random() * 100 - 50);
 
                 window.nzxt.v1.onMonitoringDataUpdate(mockData);
             }, 1000);
