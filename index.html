@@ -3,106 +3,234 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NZXT Web Integration Test Screen</title>
+    <title>NZXT CAM API Explorer</title>
     <style>
+        :root {
+            --bg-dark: #0f0f13;
+            --bg-panel: #1a1a24;
+            --text-main: #f0f0f5;
+            --text-muted: #888899;
+            --accent: #9b59b6;
+            --cpu-color: #3498db;
+            --gpu-color: #2ecc71;
+            --ram-color: #f1c40f;
+            --kraken-color: #e74c3c;
+        }
+
         body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        * { box-sizing: inherit; }
+
+        /* ========================================================
+           KRAKEN BROWSER MODE (ON THE PUMP ITSELF)
+           Displays as a circle. Everything inside must be centered.
+           ======================================================== */
+        body.kraken-mode {
+            justify-content: center;
+            align-items: center;
+            /* CAM API injects width/height, but we'll default to 640x640 for preview */
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .kraken-screen {
+            display: none; /* Only visible in kraken mode */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle, #2a2a35 0%, #0f0f13 100%);
+            border-radius: 50%;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            padding: 10%; /* Keep content away from the physical circular bezel */
+            text-align: center;
+        }
+
+        body.kraken-mode .kraken-screen {
+            display: flex;
+        }
+
+        .kraken-title {
+            font-size: 2vw;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 2vh;
+        }
+
+        .kraken-stats {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .k-stat {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 10px 15px;
+            min-width: 120px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .k-stat-label { font-size: 1.5vw; color: var(--text-muted); display: block; margin-bottom: 5px; }
+        .k-stat-val { font-size: 3vw; font-weight: bold; }
+        .c-cpu { color: var(--cpu-color); }
+        .c-gpu { color: var(--gpu-color); }
+        .c-ram { color: var(--ram-color); }
+        .c-liq { color: var(--kraken-color); }
+
+        /* ========================================================
+           CONFIGURATION BROWSER MODE (ON PC MONITOR)
+           Displays developer tools, JSON preview, and simulated pump
+           ======================================================== */
+        .desktop-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        body.kraken-mode .desktop-layout {
+            display: none;
+        }
+
+        .left-panel {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid #333;
+            background: #15151a;
             overflow-y: auto;
         }
 
-        h1 {
-            color: #9b59b6;
-            text-align: center;
-            border-bottom: 2px solid #9b59b6;
-            padding-bottom: 10px;
-            margin-top: 0;
-        }
-
-        .container {
+        .right-panel {
+            flex: 1.5;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            background: #0a0a0c;
         }
 
-        .section {
-            background-color: #1e1e1e;
-            border: 1px solid #333;
+        .preview-container {
+            width: 640px;
+            height: 640px;
+            border-radius: 50%; /* Simulate physical screen */
+            border: 10px solid #222;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            position: relative;
+            background: #000;
+            flex-shrink: 0;
+            overflow: hidden;
+            /* We inject the kraken-screen content here via JS cloning for the preview */
+        }
+
+        .dev-header {
+            margin-bottom: 20px;
+        }
+
+        .dev-header h1 {
+            margin: 0;
+            color: var(--accent);
+            font-size: 24px;
+        }
+
+        .dev-header p {
+            color: var(--text-muted);
+            margin: 5px 0 0 0;
+            font-size: 14px;
+        }
+
+        .json-viewer {
+            flex: 1;
+            background: #000;
             border-radius: 8px;
-            padding: 15px;
-        }
-
-        .section-title {
-            color: #00d2ff;
-            font-size: 1.2em;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            border-bottom: 1px dashed #333;
-            padding-bottom: 5px;
-        }
-
-        .data-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 10px;
-        }
-
-        .data-item {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9em;
-        }
-
-        .data-label {
-            color: #aaaaaa;
-        }
-
-        .data-value {
-            color: #2ecc71;
-            font-weight: bold;
-        }
-
-        .raw-data {
-            background-color: #000;
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            font-size: 0.8em;
-            white-space: pre-wrap;
+            padding: 20px;
+            overflow: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            border: 1px solid #333;
         }
 
         /* Syntax Highlighting */
-        .string { color: #f1c40f; }
-        .number { color: #3498db; }
-        .boolean { color: #e74c3c; }
-        .null { color: #e74c3c; font-weight: bold; }
-        .key { color: #e67e22; }
+        .string { color: #a6e22e; }
+        .number { color: #ae81ff; }
+        .boolean { color: #fd971f; }
+        .null { color: #f92672; font-weight: bold; }
+        .key { color: #66d9ef; font-weight: bold; }
 
     </style>
 </head>
 <body>
 
-    <h1>NZXT CAM Integration Test</h1>
-
-    <div class="container">
-        <!-- Rendered Data Sections -->
-        <div id="rendered-data">
-            <!-- Sections will be injected here -->
+    <!-- KRAKEN LCD UI (Visible when ?kraken=1) -->
+    <div class="kraken-screen" id="kraken-ui">
+        <div class="kraken-title">System Status</div>
+        <div class="kraken-stats" id="kraken-stats-container">
+            <!-- Dynamic data injected here -->
+            Waiting for CAM data...
         </div>
+    </div>
 
-        <!-- Raw JSON Data Section -->
-        <div class="section">
-            <div class="section-title">Raw Monitoring Data</div>
-            <pre class="raw-data" id="raw-json">Waiting for data...</pre>
+    <!-- DESKTOP DEV DASHBOARD (Visible normally on monitor) -->
+    <div class="desktop-layout" id="desktop-ui">
+        <div class="left-panel">
+            <div class="dev-header" style="text-align: center; margin-bottom: 40px;">
+                <h1>Pump LCD Preview</h1>
+                <p>Simulating 640x640 display</p>
+                <p style="color: #e74c3c; font-size: 12px; margin-top: 10px;">(This is how it will look on the physical AIO)</p>
+            </div>
+
+            <div class="preview-container" id="pump-preview">
+                <!-- We will copy the kraken-ui HTML into here so the developer sees exactly what the pump sees -->
+            </div>
+        </div>
+        <div class="right-panel">
+            <div class="dev-header">
+                <h1>Live API Data (Developer View)</h1>
+                <p>Analyze `window.nzxt.v1.onMonitoringDataUpdate(data)` payload in real-time. Use this to find all fields like gpu0, gpu1, arrays, etc.</p>
+            </div>
+            <pre class="json-viewer" id="json-viewer">Waiting for API data...</pre>
         </div>
     </div>
 
     <script>
-        // Simple syntax highlighter for JSON
+        // ---------------------------------------------------------
+        // 1. ENVIRONMENT DETECTION
+        // CAM adds "?kraken=1" when loading this URL inside the actual pump LCD browser.
+        // If it's not there, we assume the user opened the URL on their PC monitor (Config Browser).
+        // ---------------------------------------------------------
+        const searchParams = new URLSearchParams(window.location.search);
+        const isKrakenBrowser = searchParams.get("kraken") === "1" || searchParams.get("test") === "kraken";
+
+        if (isKrakenBrowser) {
+            document.body.classList.add("kraken-mode");
+            console.log("Running in Kraken LCD Mode");
+        } else {
+            console.log("Running in Desktop Config / Developer Mode");
+            // Set up the pump preview container to mirror the kraken UI
+            document.getElementById('pump-preview').innerHTML = document.getElementById('kraken-ui').outerHTML;
+            // Un-hide the mirrored preview
+            document.getElementById('pump-preview').querySelector('.kraken-screen').style.display = 'flex';
+        }
+
+        // ---------------------------------------------------------
+        // 2. DATA FORMATTING UTILITIES
+        // ---------------------------------------------------------
         function syntaxHighlight(json) {
             if (typeof json != 'string') {
                 json = JSON.stringify(json, undefined, 2);
@@ -111,131 +239,88 @@
             return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
                 var cls = 'number';
                 if (/^"/.test(match)) {
-                    if (/:$/.test(match)) {
-                        cls = 'key';
-                    } else {
-                        cls = 'string';
-                    }
-                } else if (/true|false/.test(match)) {
-                    cls = 'boolean';
-                } else if (/null/.test(match)) {
-                    cls = 'null';
-                }
+                    if (/:$/.test(match)) { cls = 'key'; }
+                    else { cls = 'string'; }
+                } else if (/true|false/.test(match)) { cls = 'boolean'; }
+                else if (/null/.test(match)) { cls = 'null'; }
                 return '<span class="' + cls + '">' + match + '</span>';
             });
         }
 
-        // Formats data to a friendly string
-        function formatData(value, suffix = '') {
-            if (value === undefined || value === null) return 'N/A';
-            if (typeof value === 'number') {
-                // Keep max 2 decimal places
-                return Math.round(value * 100) / 100 + suffix;
-            }
-            return value + suffix;
+        function formatVal(val) {
+            if (val === undefined || val === null) return '--';
+            return Math.round(val);
         }
 
-        // Generates HTML for a grid of key-value pairs
-        function generateGrid(dataObj, fieldsAndSuffixes) {
-            let html = '<div class="data-grid">';
-            for (const [key, label, suffix] of fieldsAndSuffixes) {
-                html += `
-                    <div class="data-item">
-                        <span class="data-label">${label}:</span>
-                        <span class="data-value">${formatData(dataObj[key], suffix)}</span>
+        // ---------------------------------------------------------
+        // 3. UI UPDATER (Runs every 1 second when CAM pushes data)
+        // ---------------------------------------------------------
+        function updateUI(data) {
+            // Update the raw JSON on the desktop monitor view
+            if (!isKrakenBrowser) {
+                document.getElementById('json-viewer').innerHTML = syntaxHighlight(data);
+            }
+
+            // Build the HTML for the circular LCD screen
+            let statsHtml = '';
+
+            // CPU Temp & Load
+            if (data.cpus && data.cpus.length > 0) {
+                const cpu = data.cpus[0]; // Usually just 1 CPU
+                const loadStr = cpu.load !== undefined ? formatVal(cpu.load * 100) + '%' : '--%';
+                statsHtml += `
+                    <div class="k-stat">
+                        <span class="k-stat-label">CPU Temp</span>
+                        <span class="k-stat-val c-cpu">${formatVal(cpu.temperature)}°C</span>
+                    </div>
+                    <div class="k-stat">
+                        <span class="k-stat-label">CPU Load</span>
+                        <span class="k-stat-val c-cpu">${loadStr}</span>
                     </div>
                 `;
             }
-            html += '</div>';
-            return html;
-        }
 
-        // Update the UI with new monitoring data
-        function updateUI(data) {
-            const renderedDataEl = document.getElementById('rendered-data');
-            const rawJsonEl = document.getElementById('raw-json');
-
-            // Update Raw JSON
-            rawJsonEl.innerHTML = syntaxHighlight(data);
-
-            let html = '';
-
-            // CPUs
-            if (data.cpus && data.cpus.length > 0) {
-                data.cpus.forEach((cpu, index) => {
-                    html += `<div class="section">
-                        <div class="section-title">CPU ${index}: ${cpu.name || 'Unknown'}</div>`;
-
-                    const fields = [
-                        ['load', 'Load', '%'],
-                        ['temperature', 'Temp', '°C'],
-                        ['frequency', 'Freq', ' MHz'],
-                        ['fanSpeed', 'Fan', ' RPM'],
-                        ['power', 'Power', ' W']
-                    ];
-
-                    // Multiply load by 100 for percentage
-                    const c = {...cpu};
-                    if(c.load !== undefined) c.load = c.load * 100;
-
-                    html += generateGrid(c, fields);
-                    html += `</div>`;
-                });
-            }
-
-            // GPUs
+            // GPU Temps & Loads (Handles GPU0, GPU1, etc dynamically)
             if (data.gpus && data.gpus.length > 0) {
                 data.gpus.forEach((gpu, index) => {
-                    html += `<div class="section">
-                        <div class="section-title">GPU ${index}: ${gpu.name || 'Unknown'}</div>`;
-
-                    const fields = [
-                        ['load', 'Load', '%'],
-                        ['temperature', 'Temp', '°C'],
-                        ['frequency', 'Freq', ' MHz'],
-                        ['fanSpeed', 'Fan', ' RPM'],
-                        ['power', 'Power', ' W']
-                    ];
-
-                    const g = {...gpu};
-                    if(g.load !== undefined) g.load = g.load * 100;
-
-                    html += generateGrid(g, fields);
-                    html += `</div>`;
+                    const loadStr = gpu.load !== undefined ? formatVal(gpu.load * 100) + '%' : '--%';
+                    statsHtml += `
+                        <div class="k-stat">
+                            <span class="k-stat-label">GPU${index} Temp</span>
+                            <span class="k-stat-val c-gpu">${formatVal(gpu.temperature)}°C</span>
+                        </div>
+                        <div class="k-stat">
+                            <span class="k-stat-label">GPU${index} Load</span>
+                            <span class="k-stat-val c-gpu">${loadStr}</span>
+                        </div>
+                    `;
                 });
             }
 
-            // RAM
-            if (data.ram) {
-                html += `<div class="section">
-                    <div class="section-title">RAM</div>`;
-
-                const fields = [
-                    ['totalSize', 'Total', ' MB'],
-                    ['inUse', 'In Use', ' MB']
-                ];
-
-                html += generateGrid(data.ram, fields);
-                html += `</div>`;
-            }
-
-            // Kraken
+            // Liquid Temp
             if (data.kraken) {
-                html += `<div class="section">
-                    <div class="section-title">Kraken Cooler</div>`;
-
-                const fields = [
-                    ['liquidTemperature', 'Liquid Temp', '°C']
-                ];
-
-                html += generateGrid(data.kraken, fields);
-                html += `</div>`;
+                statsHtml += `
+                    <div class="k-stat" style="width: 100%;">
+                        <span class="k-stat-label">Liquid Temp</span>
+                        <span class="k-stat-val c-liq">${formatVal(data.kraken.liquidTemperature)}°C</span>
+                    </div>
+                `;
             }
 
-            renderedDataEl.innerHTML = html;
+            // Apply HTML to the actual Kraken screen div
+            const krakenContainer = document.getElementById('kraken-stats-container');
+            if (krakenContainer) krakenContainer.innerHTML = statsHtml;
+
+            // If we are on Desktop, also update the mirrored preview container
+            if (!isKrakenBrowser) {
+                const previewContainer = document.getElementById('pump-preview').querySelector('#kraken-stats-container');
+                if (previewContainer) previewContainer.innerHTML = statsHtml;
+            }
         }
 
-        // Initialize NZXT CAM Web Integration API
+        // ---------------------------------------------------------
+        // 4. CAM API HOOK
+        // ---------------------------------------------------------
         window.nzxt = {
             v1: {
                 onMonitoringDataUpdate: (data) => {
@@ -244,54 +329,34 @@
             }
         };
 
-        // Mock data for testing outside of CAM
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('test') === '1') {
-            console.log("Running in test mode. Generating mock data.");
+        // ---------------------------------------------------------
+        // 5. MOCK DATA GENERATOR (For offline browser testing)
+        // ---------------------------------------------------------
+        const forceMockData = searchParams.get("test") === "1" || searchParams.get("test") === "kraken";
+        if (forceMockData) {
+            console.log("Running in Mock Test Mode.");
+
+            // If the API hasn't populated window.nzxt.v1.shape natively, let's mock it
+            if (!window.nzxt.v1.shape) {
+                window.nzxt.v1.shape = "circle";
+                window.nzxt.v1.width = 640;
+                window.nzxt.v1.height = 640;
+            }
 
             setInterval(() => {
                 const mockData = {
                     cpus: [
-                        {
-                            name: "Mock CPU 9900K",
-                            load: Math.random() * 0.5 + 0.1, // 10% to 60%
-                            temperature: Math.random() * 20 + 40, // 40 to 60 C
-                            frequency: 4500,
-                            fanSpeed: Math.floor(Math.random() * 500 + 1000),
-                            power: Math.random() * 50 + 50
-                        }
+                        { name: "Intel Core i9-13900K", load: Math.random() * 0.4 + 0.1, temperature: Math.random() * 15 + 45 }
                     ],
                     gpus: [
-                        {
-                            name: "Mock GPU RTX 3080",
-                            load: Math.random() * 0.8 + 0.2, // 20% to 100%
-                            temperature: Math.random() * 30 + 50, // 50 to 80 C
-                            frequency: 1800,
-                            fanSpeed: Math.floor(Math.random() * 1000 + 1500),
-                            power: Math.random() * 200 + 100
-                        },
-                        {
-                            name: "Mock GPU RTX 3080 (Secondary)",
-                            load: Math.random() * 0.2, // 0% to 20%
-                            temperature: Math.random() * 10 + 40, // 40 to 50 C
-                            frequency: 300,
-                            fanSpeed: 0,
-                            power: 15
-                        }
+                        { name: "NVIDIA GeForce RTX 4090", load: Math.random() * 0.9, temperature: Math.random() * 20 + 50 },
+                        { name: "NVIDIA GeForce RTX 4090 (Secondary)", load: 0.05, temperature: 41 } // Multiple GPUs simulation (GPU0, GPU1)
                     ],
-                    ram: {
-                        totalSize: 32768,
-                        inUse: Math.random() * 8192 + 8192 // 8GB to 16GB
-                    },
-                    kraken: {
-                        liquidTemperature: Math.random() * 5 + 30 // 30 to 35 C
-                    }
+                    ram: { totalSize: 32768, inUse: Math.random() * 4000 + 12000 },
+                    kraken: { liquidTemperature: Math.random() * 2 + 32 }
                 };
 
-                // Trigger the callback
-                if (window.nzxt && window.nzxt.v1 && window.nzxt.v1.onMonitoringDataUpdate) {
-                    window.nzxt.v1.onMonitoringDataUpdate(mockData);
-                }
+                window.nzxt.v1.onMonitoringDataUpdate(mockData);
             }, 1000);
         }
 
